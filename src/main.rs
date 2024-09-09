@@ -1,7 +1,7 @@
 mod workers;
 mod pipe;
 
-use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::prelude::Peripherals};
+use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::{gpio::{IOPin, PinDriver}, prelude::Peripherals}};
 use qdb::{ApplicationTrait, ConsoleLogger};
 
 fn main() {
@@ -27,11 +27,14 @@ fn main() {
 
     let mut db_worker = Box::new(qdb::DatabaseWorker::new());
     let mut wifi_worker = Box::new(workers::wifi::Worker::new("SSID", "PASSWORD", peripherals.modem, sysloop));
+    let mut remote_worker = Box::new(workers::remote::Worker::new(peripherals.pins.gpio0.downgrade()));
 
     db_worker.network_connection_events = Some(wifi_worker.emitters.connection_status.new_receiver());
+    remote_worker.receivers.db_connection_status = Some(db_worker.emitters.connection_status.new_receiver());
     
     app.add_worker(wifi_worker);
     app.add_worker(db_worker);
+    app.add_worker(remote_worker);
 
     app.execute();
 }
