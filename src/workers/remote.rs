@@ -1,7 +1,6 @@
 use std::sync::mpsc::Receiver;
 
 use esp_idf_svc::hal::{gpio::{Input, InputPin, OutputPin, PinDriver, Pull}, peripheral::Peripheral};
-use qdb::{DatabaseField, DatabaseValue, RawField, RawValue};
 
 pub struct Receivers {
     pub db_connection_status: Option<Receiver<bool>>,
@@ -28,8 +27,8 @@ impl<'a, T: InputPin + OutputPin> Worker<'a, T> {
     }
 }
 
-impl<'a, T: InputPin + OutputPin> qdb::WorkerTrait for Worker<'a, T> {
-    fn intialize(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait for Worker<'a, T> {
+    fn intialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         ctx.logger().info("[Remote::initialize] Initializing Remote worker");
 
         self.pin.set_pull(Pull::Down)?;
@@ -37,7 +36,7 @@ impl<'a, T: InputPin + OutputPin> qdb::WorkerTrait for Worker<'a, T> {
         Ok(())
     }
 
-    fn do_work(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+    fn do_work(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         if !self.is_db_connected {
             return Ok(());
         }
@@ -49,10 +48,8 @@ impl<'a, T: InputPin + OutputPin> qdb::WorkerTrait for Worker<'a, T> {
                 let doors = ctx.database().find("AudioController", &vec![], |_| true)?;
 
                 doors.iter().for_each(|door| {
-                    let mut field = RawField::new(door.entity_id.clone(), "TextToSpeech");
-                    field.value = DatabaseValue::new(RawValue::String("Button pressed".to_string()));
                     ctx.database().write(&vec![{
-                        DatabaseField::new(field)
+                        door.field("TextToSpeech").set_str_value("That was easy".into()).clone()
                     }]).ok();
                 });
 
@@ -65,7 +62,7 @@ impl<'a, T: InputPin + OutputPin> qdb::WorkerTrait for Worker<'a, T> {
         Ok(())
     }
 
-    fn deinitialize(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+    fn deinitialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         ctx.logger().info("[Remote::deinitialize] Deinitializing Remote worker");
 
         Ok(())

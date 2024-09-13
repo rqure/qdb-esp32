@@ -5,8 +5,8 @@ use esp_idf_svc::sys::{
     esp_err_to_name, esp_netif_dns_info_t, esp_netif_set_dns_info, esp_netif_dns_type_t_ESP_NETIF_DNS_MAIN,
 };
 
-pub struct EventEmitters {
-    pub connection_status: qdb::EventEmitter<bool>,
+pub struct Emitters {
+    pub connection_status: qdb::framework::events::emitter::Emitter<bool>,
 }
 
 pub struct Worker {
@@ -15,7 +15,7 @@ pub struct Worker {
     is_connected: bool,
     handle: Box<EspWifi<'static>>,
     pub dns: Option<String>,
-    pub emitters: EventEmitters,
+    pub emitters: Emitters,
 }
 
 impl Worker {
@@ -26,15 +26,15 @@ impl Worker {
             is_connected: false,
             handle: Box::new(EspWifi::new( modem, sysloop.clone(), None).unwrap()),
             dns: None,
-            emitters: EventEmitters {
-                connection_status: qdb::EventEmitter::new(),
+            emitters: Emitters {
+                connection_status: qdb::framework::events::emitter::Emitter::new(),
             },
         }
     }
 }
 
-impl qdb::WorkerTrait for Worker {
-    fn intialize(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+impl qdb::framework::workers::common::WorkerTrait for Worker {
+    fn intialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         ctx.logger().info( format!("[WiFiConnector::initialize] Initializing WiFi connector (SSID: '{}')", self.ssid).as_str());
 
         let conf = Configuration::Client(ClientConfiguration {
@@ -51,7 +51,7 @@ impl qdb::WorkerTrait for Worker {
         Ok(())
     }
 
-    fn do_work(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+    fn do_work(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         if self.handle.is_connected()? {
             if !self.is_connected {
                 ctx.logger().info( "[WiFiConnector::do_work] WiFi connected");
@@ -73,7 +73,7 @@ impl qdb::WorkerTrait for Worker {
         Ok(())
     }
 
-    fn deinitialize(&mut self, ctx: qdb::ApplicationContext) -> qdb::Result<()> {
+    fn deinitialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         ctx.logger().info( "[WiFiConnector::deinitialize] Deinitializing WiFi connector");
         self.handle.disconnect()?;
         Ok(())

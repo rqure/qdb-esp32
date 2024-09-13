@@ -1,8 +1,12 @@
 mod workers;
 mod pipe;
 
-use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::{gpio::{IOPin, PinDriver}, prelude::Peripherals}};
-use qdb::{ApplicationTrait, ConsoleLogger};
+use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::{gpio::IOPin, prelude::Peripherals}};
+
+use qdb::framework::application::{Application, ApplicationTrait, Context};
+use qdb::framework::database::Database;
+use qdb::framework::client::Client;
+use qdb::framework::logger::Logger;
 
 fn main() {
     // It is necessary to call this function once. Otherwise some patches to the runtime
@@ -15,21 +19,24 @@ fn main() {
     let peripherals = Peripherals::take().expect("Failed to take peripherals");
     let sysloop = EspSystemEventLoop::take().expect("Failed to take system event loop");
 
-    let ctx = qdb::ApplicationContext::new(
-        qdb::Database::new(
-            qdb::rest::Client::new("http://qserver.local", Box::new(pipe::Pipe)),
+    let ctx = Context::new(
+        Database::new(
+            Client::new(
+                qdb::clients::rest::Client::new("http://qserver.local", Box::new(pipe::Pipe))
+            ),
         ),
-        qdb::Logger::new(ConsoleLogger::new(qdb::LogLevel::Debug))
+        Logger::new(
+            qdb::loggers::console::Console::new(qdb::loggers::common::LogLevel::Debug))
     );
 
-    let loop_interval_ms = 500;
-    let mut app = qdb::Application::new(ctx, loop_interval_ms);
+    let loop_interval_ms = 100;
+    let mut app = Application::new(ctx, loop_interval_ms);
 
-    let mut db_worker = Box::new(qdb::DatabaseWorker::new());
+    let mut db_worker = Box::new(qdb::framework::workers::database::Worker::new());
     let mut wifi_worker = Box::new(workers::wifi::Worker::new("SSID", "PASSWORD", peripherals.modem, sysloop));
     let mut remote_worker = Box::new(workers::remote::Worker::new(peripherals.pins.gpio0.downgrade()));
 
-    db_worker.network_connection_events = Some(wifi_worker.emitters.connection_status.new_receiver());
+    db_worker.receivers.network_connection_events = Some(wifi_worker.emitters.connection_status.new_receiver());
     remote_worker.receivers.db_connection_status = Some(db_worker.emitters.connection_status.new_receiver());
     
     app.add_worker(wifi_worker);

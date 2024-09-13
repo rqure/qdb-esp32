@@ -4,7 +4,7 @@ use embedded_svc::http::client::Client;
 
 pub struct Pipe;
 
-impl qdb::rest::Pipe for Pipe {
+impl qdb::clients::rest::Pipe for Pipe {
     fn get(&self, url: &str) -> qdb::Result<String> {
         let connection = EspHttpConnection::new(&Configuration {
             ..Default::default()
@@ -30,7 +30,7 @@ impl qdb::rest::Pipe for Pipe {
 
                 Ok(body)
             },
-            _ => Err(qdb::Error::from_client(format!("Bad status code: {}", status).as_str())),
+            _ => Err(qdb::error::Error::from_client(format!("Bad status code: {}", status).as_str())),
         }
     }
 
@@ -62,7 +62,7 @@ impl qdb::rest::Pipe for Pipe {
 
                 Ok(body)
             },
-            _ => Err(qdb::Error::from_client(format!("Bad status code: {}", status).as_str())),
+            _ => Err(qdb::error::Error::from_client(format!("Bad status code: {}", status).as_str())),
         }
     }
 }
