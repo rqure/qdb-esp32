@@ -1,5 +1,6 @@
 mod workers;
 mod pipe;
+mod auth;
 
 use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::{gpio::IOPin, prelude::Peripherals}};
 
@@ -26,17 +27,17 @@ fn main() {
             ),
         ),
         Logger::new(
-            qdb::loggers::console::Console::new(qdb::loggers::common::LogLevel::Debug))
+            qdb::loggers::console::Console::new(qdb::loggers::common::LogLevel::Trace))
     );
 
     let loop_interval_ms = 100;
     let mut app = Application::new(ctx, loop_interval_ms);
 
     let mut db_worker = Box::new(qdb::framework::workers::database::Worker::new());
-    let mut wifi_worker = Box::new(workers::wifi::Worker::new("SSID", "PASSWORD", peripherals.modem, sysloop));
+    let mut wifi_worker = Box::new(workers::wifi::Worker::new(auth::SSID, auth::PASSWORD, peripherals.modem, sysloop));
     let mut remote_worker = Box::new(workers::remote::Worker::new(peripherals.pins.gpio0.downgrade()));
 
-    db_worker.receivers.network_connection_events = Some(wifi_worker.emitters.connection_status.new_receiver());
+    db_worker.receivers.network_connection_status = Some(wifi_worker.emitters.connection_status.new_receiver());
     remote_worker.receivers.db_connection_status = Some(db_worker.emitters.connection_status.new_receiver());
     
     app.add_worker(wifi_worker);

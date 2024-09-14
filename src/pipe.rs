@@ -16,19 +16,18 @@ impl qdb::clients::rest::Pipe for Pipe {
         let status = response.status();
         match status {
             200..=299 => {
-                let mut body = String::new();
-                let mut buf = [0_u8; 256];
+                let mut body = Vec::with_capacity(2048);
+                let mut buf = [0_u8; 1024];
                 
                 loop {
                     let bytes_read = response.read(&mut buf)?;
                     if bytes_read == 0 {
                         break;
                     }
-
-                    body.push_str(std::str::from_utf8(&buf[..bytes_read])?);
+                    body.extend_from_slice(&buf[..bytes_read]);
                 }
 
-                Ok(body)
+                Ok(String::from_utf8(body)?)
             },
             _ => Err(qdb::error::Error::from_client(format!("Bad status code: {}", status).as_str())),
         }
