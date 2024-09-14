@@ -49,11 +49,11 @@ impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait f
             if !self.write_complete {
                 ctx.logger().info(format!("[{}] Remote button pressed", c).as_str());
 
-                let doors = ctx.database().find("AudioController", &vec![], |_| true)?;
+                let doors = ctx.database().find("GarageDoor", &vec![], |_| true)?;
 
                 doors.iter().for_each(|door| {
                     ctx.database().write(&vec![{
-                        door.field("TextToSpeech").set_str_value("That was easy".into()).clone()
+                        door.field("OpenTrigger").set_i64_value(0).clone()
                     }]).ok();
                 });
 
@@ -68,7 +68,7 @@ impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait f
 
     fn deinitialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
         let c = format!("{}::{}", std::any::type_name::<Self>(), "deinitialize");
-        
+
         ctx.logger().info(format!("[{}] Deinitializing Remote worker", c).as_str());
 
         Ok(())
