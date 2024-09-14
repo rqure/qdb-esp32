@@ -29,7 +29,9 @@ impl<'a, T: InputPin + OutputPin> Worker<'a, T> {
 
 impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait for Worker<'a, T> {
     fn intialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
-        ctx.logger().info("[Remote::initialize] Initializing Remote worker");
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "initialize");
+
+        ctx.logger().info(format!("[{}] Initializing Remote worker", c).as_str());
 
         self.pin.set_pull(Pull::Down)?;
 
@@ -37,13 +39,15 @@ impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait f
     }
 
     fn do_work(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "do_work");
+
         if !self.is_db_connected {
             return Ok(());
         }
 
         if !self.pin.is_high() {
             if !self.write_complete {
-                ctx.logger().info("[Remote::do_work] Remote button pressed");
+                ctx.logger().info(format!("[{}] Remote button pressed", c).as_str());
 
                 let doors = ctx.database().find("AudioController", &vec![], |_| true)?;
 
@@ -63,7 +67,9 @@ impl<'a, T: InputPin + OutputPin> qdb::framework::workers::common::WorkerTrait f
     }
 
     fn deinitialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
-        ctx.logger().info("[Remote::deinitialize] Deinitializing Remote worker");
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "deinitialize");
+        
+        ctx.logger().info(format!("[{}] Deinitializing Remote worker", c).as_str());
 
         Ok(())
     }

@@ -35,7 +35,9 @@ impl Worker {
 
 impl qdb::framework::workers::common::WorkerTrait for Worker {
     fn intialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
-        ctx.logger().info( format!("[WiFiConnector::initialize] Initializing WiFi connector (SSID: '{}')", self.ssid).as_str());
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "initialize");
+
+        ctx.logger().info( format!("[{}] Initializing WiFi connector (SSID: '{}')", c, self.ssid).as_str());
 
         let conf = Configuration::Client(ClientConfiguration {
             ssid: self.ssid.as_str().try_into().expect("SSID too long"),
@@ -52,20 +54,22 @@ impl qdb::framework::workers::common::WorkerTrait for Worker {
     }
 
     fn do_work(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "do_work");
+
         if self.handle.is_connected()? {
             if !self.is_connected {
-                ctx.logger().info( "[WiFiConnector::do_work] WiFi connected");
+                ctx.logger().info( format!("[{}] WiFi connected", c).as_str());
                 self.is_connected = true;
                 self.emitters.connection_status.emit(self.is_connected);
 
                 if let Some(dns) = &self.dns {
                     set_dns_server(dns, self.handle.sta_netif())?;
-                    ctx.logger().info(format!("Dns: {}", self.handle.sta_netif().get_dns().to_string()).as_str());
+                    ctx.logger().info(format!("[{}] Dns: {}", c, self.handle.sta_netif().get_dns().to_string()).as_str());
                 }
             }
         } else {
             if self.is_connected {
-                ctx.logger().info( "[WiFiConnector::do_work] WiFi disconnected");
+                ctx.logger().info( format!("[{}] WiFi disconnected", c).as_str());
                 self.is_connected = false;
                 self.emitters.connection_status.emit(self.is_connected);
             } 
@@ -74,7 +78,8 @@ impl qdb::framework::workers::common::WorkerTrait for Worker {
     }
 
     fn deinitialize(&mut self, ctx: qdb::framework::application::Context) -> qdb::Result<()> {
-        ctx.logger().info( "[WiFiConnector::deinitialize] Deinitializing WiFi connector");
+        let c = format!("{}::{}", std::any::type_name::<Self>(), "deinitialize");
+        ctx.logger().info( format!("[{}] Deinitializing WiFi connector", c).as_str());
         self.handle.disconnect()?;
         Ok(())
     }
